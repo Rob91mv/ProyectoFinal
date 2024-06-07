@@ -1,0 +1,618 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# # Hola &#x1F600;
+# 
+# Soy **Hesus Garcia**, revisor de código de Triple Ten, y voy a examinar el proyecto que has desarrollado recientemente. Si encuentro algún error, te lo señalaré para que lo corrijas, ya que mi objetivo es ayudarte a prepararte para un ambiente de trabajo real, donde el líder de tu equipo actuaría de la misma manera. Si no puedes solucionar el problema, te proporcionaré más información en la próxima oportunidad. Cuando encuentres un comentario,  **por favor, no los muevas, no los modifiques ni los borres**. 
+# **Una gran disculpa por el retraso en la revisión de tu proyecto. Hemos tenido una carga de proyectos que nos sobrepasó**
+# Revisaré cuidadosamente todas las implementaciones que has realizado para cumplir con los requisitos y te proporcionaré mis comentarios de la siguiente manera:
+# 
+# 
+# <div class="alert alert-block alert-success">
+# <b>Comentario del revisor</b> <a class=“tocSkip”></a>
+# Si todo está perfecto.
+# </div>
+# 
+# <div class="alert alert-block alert-warning">
+# <b>Comentario del revisor</b> <a class=“tocSkip”></a>
+# Si tu código está bien pero se puede mejorar o hay algún detalle que le hace falta.
+# </div>
+# 
+# <div class="alert alert-block alert-danger">
+# <b>Comentario del revisor</b> <a class=“tocSkip”></a>
+# Si de pronto hace falta algo o existe algún problema con tu código o conclusiones.
+# </div>
+# 
+# Puedes responderme de esta forma:
+# <div class="alert alert-block alert-info">
+# <b>Respuesta del estudiante</b> <a class=“tocSkip”></a>
+# </div>
+# 
+# </br>
+# 
+# **¡Empecemos!**  &#x1F680;
+# 
+
+# # INTRODUCCION
+
+# El siguiente proyecto consiste en asesorar a la compañía de telecomunicaciones Interconnect sobre la creación de un modelo predictivo de la tasa de cancelación de clientes, de tal forma de que la compañía pueda anticiparse para ofrecer códigos promocionlaes y opciones de planes especiales. 
+# 
+# Para ello se utilizaran bases de datos facilitadas por el equipo de marketing de Interconnect que recopila datos desde el 2016 en adelante.
+# Se debe considerar que la información del contrato es válida a partir del 1 de febrero de 2020.
+
+# ## Inicialización
+
+# In[65]:
+
+
+import pandas as pd
+import re
+from scipy import stats as st
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import f1_score
+from sklearn.utils import shuffle
+from sklearn.utils import resample
+from sklearn.metrics import roc_curve, roc_auc_score
+
+
+## Carga de datos
+
+
+contract = pd.read_csv('/datasets/final_provider/contract.csv')
+personal = pd.read_csv('/datasets/final_provider/personal.csv')
+internet = pd.read_csv('/datasets/final_provider/internet.csv')
+phone = pd.read_csv('/datasets/final_provider/phone.csv')
+
+
+# <div class="alert alert-block alert-danger">
+#     <b>Comentarios del Revisor</b> <a class="tocSkip"></a><br>
+# Me parece que estos no son los datasets para el proyecto final, por favor revisa mi comentario del final.  </div>
+
+# 
+# <div class="alert alert-block alert-info">
+# <b>Corregido el llamado a los datasets</b> <a class=“tocSkip”></a>
+# </div>
+
+# ## Análisis exploratorio de datos (EDA)
+
+# In[67]:
+
+
+contract.info() #Verificamos los campos a nivel general de 'contract'
+
+
+# Glosario de dataset 'contract':
+# 
+# * customerID - ID del cliente (clave para unir datasets).
+# * BeginDate - Fecha de inicio del contrato (puede ayudar a calcular la duración del contrato).
+# * EndDate - Fecha de fin del contrato (puede ayudar a determinar si un contrato ha finalizado recientemente).
+# * Type - Tipo de contrato (mensual, 1 año, 2 años), importante para entender la fidelidad del cliente.
+# * PaperlessBilling - Facturación electrónica (puede influir en la satisfacción del cliente).
+# * PaymentMethod - Método de pago (algunos métodos pueden estar asociados con una mayor probabilidad de churn).
+# * MonthlyCharges - Cobro mensual (importante para entender la carga financiera sobre el cliente).
+# * TotalCharges - Cobro total (puede reflejar el valor del cliente a lo largo del tiempo).
+
+# <div class="alert alert-block alert-success">
+# <b>Comentario del revisor</b> <a class=“tocSkip”></a>
+# La carga de datos se realiza correctamente, utilizando pandas para leer los archivos CSV. Además, se incluye una descripción de los campos en el dataset 'contract', lo que facilita la comprensión de las variables disponibles para el análisis.
+# </div>
+
+# In[68]:
+
+
+contract.tail(4) #Vemos una muestra
+
+
+# In[69]:
+
+
+#Verificamos duplicidad
+duplicados1 = contract.duplicated()
+cantidad_duplicados1 = duplicados1.sum()
+cantidad_duplicados1 # Finalmente, comprobamos el número de filas duplicadas de 'contract'
+
+
+# A continuacion procedemos a revisar los posibles errores y/o anomalías de cada variable de 'contract'.
+
+# In[70]:
+
+
+contract['BeginDate'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en las fechas.
+
+
+# In[71]:
+
+
+contract['EndDate'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en las fechas.
+
+
+# In[72]:
+
+
+# Creamos la variable objetivo en una nueva columna, ya que es clave para el análisis.
+contract['ContractStatus'] = contract['EndDate'].apply(lambda x: 1 if x == 'No' else 0)
+
+# Verificamos el resultado
+print(contract[['EndDate', 'ContractStatus']].head())
+
+
+# In[73]:
+
+
+contract['Type'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en los datos.
+
+
+# In[74]:
+
+
+contract['PaperlessBilling'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en los datos.
+
+
+# In[75]:
+
+
+contract['PaymentMethod'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en los datos.
+
+
+# In[76]:
+
+
+personal.info() #Verificamos los campos a nivel general de 'personal'
+
+
+# Glosario para dataset 'personal':
+# 
+# * customerID - ID del cliente.
+# * gender - Género (podría tener alguna correlación con la tasa de cancelación, aunque debe analizarse cuidadosamente para evitar sesgos).
+# * SeniorCitizen - Indicador de si el cliente es ciudadano senior (los clientes mayores pueden tener diferentes patrones de comportamiento).
+# * Partner - Si el cliente tiene pareja (puede influir en la estabilidad del cliente con el servicio).
+# * Dependents - Si el cliente tiene dependientes (podría influir en la decisión de cancelar el servicio).
+
+# In[77]:
+
+
+personal.head(4)  # Vemos una muestra
+
+
+# In[78]:
+
+
+#Verificamos duplicidad
+duplicados2 = personal.duplicated()
+cantidad_duplicados2 = duplicados2.sum()
+cantidad_duplicados2 # Finalmente, comprobamos el número de filas duplicadas de 'personal'
+
+
+# A continuacion procedemos a revisar los posibles errores y/o anomalías de cada variable de 'personal'.
+
+# In[79]:
+
+
+personal['gender'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en los datos.
+
+
+# In[80]:
+
+
+personal['SeniorCitizen'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en los datos.
+
+
+# In[81]:
+
+
+personal['Partner'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en los datos.
+
+
+# In[82]:
+
+
+personal['Dependents'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en los datos.
+
+
+# In[83]:
+
+
+internet.info() #Verificamos los campos a nivel general de 'internet'
+
+
+# Glosario del dataset 'internet':
+#      
+# * customerID: ID del cliente.
+# * InternetService: Servicios de internet a través de línea telefónica (DSL, línea de abonado digital) o a través de un cable de fibra óptica.
+# * OnlineSecurity: Si tiene o no servicio de bloqueador de sitios web maliciosos
+# * OnlineBackup: Si tiene o no el servicio de almacenamiento y back up de datos.
+# * DeviceProtection: Si tiene el servicio o no de antivirus.
+# * TechSupport: Si tiene servicio de soporte técnico.
+# * StreamingTV: Si tiene o no servicio de TV.
+# * StreamingMovies: Si tiene o no servicio de directorio de peliculas.
+# 
+
+# In[84]:
+
+
+internet.tail(4) #Vemos una muestra
+
+
+# In[85]:
+
+
+#Verificamos duplicidad
+duplicados3 = internet.duplicated()
+cantidad_duplicados3 = duplicados3.sum()
+cantidad_duplicados3 # Finalmente, comprobamos el número de filas duplicadas de 'internet'
+
+
+# In[86]:
+
+
+internet.describe() # Vemos si hay anomalías en los valores numéricos de 'internet'
+
+
+# A continuacion procedemos a revisar los posibles errores y/o anomalías de cada variable de 'internet'.
+
+# In[87]:
+
+
+internet['InternetService'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en servicio de internet.
+
+
+# In[88]:
+
+
+internet['OnlineSecurity'].sort_values(ascending=True).unique() # Verificamos posibles anomalías.
+
+
+# In[89]:
+
+
+internet['OnlineBackup'].sort_values(ascending=True).unique() # Verificamos posibles anomalías.
+
+
+# In[90]:
+
+
+internet['DeviceProtection'].sort_values(ascending=True).unique() # Verificamos posibles anomalías.
+
+
+# In[91]:
+
+
+internet['TechSupport'].sort_values(ascending=True).unique() # Verificamos posibles anomalías.
+
+
+# In[92]:
+
+
+internet['StreamingTV'].sort_values(ascending=True).unique() # Verificamos posibles anomalías.
+
+
+# In[93]:
+
+
+internet['StreamingMovies'].sort_values(ascending=True).unique() # Verificamos posibles anomalías.
+
+
+# In[94]:
+
+
+phone.info() #Verificamos los campos a nivel general de 'phone'
+
+
+# Glosario dataset 'phone': 
+# 
+# * customerID - ID del cliente.
+# * MultipleLines - Indicador de si el cliente tiene múltiples líneas telefónicas (puede ser relevante para entender la complejidad del servicio contratado).
+
+# In[95]:
+
+
+phone.head()  #Vemos una muestra
+
+
+# In[96]:
+
+
+#Verificamos duplicidad
+duplicados4 = phone.duplicated()
+cantidad_duplicados4 = duplicados4.sum()
+cantidad_duplicados4 # Finalmente, comprobamos el número de filas duplicadas de 'phone'
+
+
+# A continuacion procedemos a revisar los posibles errores y/o anomalías de cada variable de 'phone'.
+
+# In[97]:
+
+
+phone['MultipleLines'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en los datos.
+
+
+# Para efectos de analizar las variables en su totalidad en funcion de la variable objetivo es necesario unificar los datasets a continuacion:
+
+# In[98]:
+
+
+# Unir los datasets contract y personal
+data = contract.merge(personal, on='customerID', how='left')
+
+# Unir el dataset phone
+data = data.merge(phone[['customerID', 'MultipleLines']], on='customerID', how='left')
+# Unir el dataset internet
+data = data.merge(internet, on='customerID', how='left')
+
+data.info()#Verificamos la unificacion
+
+
+# <div class="alert alert-block alert-success">
+#     <b>Comentarios del Revisor</b> <a class="tocSkip"></a><br>
+# Correcto, info(), head()  son herramientas esceneciales que nos ayudaran a hacer un análisis exploratorio inicial. Opcionalmente podrías siempre incluir describe() para tener mejor idea de los valores que toman tus varibales. Continúa con el buen trabajo! </div>
+
+# **Análisis de los datasets**
+# 
+# 1) Los datasets por separado no tiene valores ausentes, pero al unirlos en un solo dataset se generan valores ausentes que se deben tratar.
+# 2) No hay duplicidad de datos en los datasets.
+# 3) Los datasets no tienen valores anómalos.
+# 4) Los tipos de datos son correctos para cada variable en todos los datasets, excepto aquellos que tienen variables de fecha. Debiese cambiar de 'object' a 'datetime'.
+# 5) Los nombres de las columnas es recomendable que estén en minuscula.
+# 6) Se recomienda crear una nueva columna para calcular el tiempo de vigencia del contrato.
+# 
+
+# ### Preprocesamiento de datos
+
+# Procederemos a corregir los datos según lo analizado anteriormente.
+
+# In[99]:
+
+
+# Definimos funcion para corregir texto de variables
+def to_snake_case(name):
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+
+# In[100]:
+
+
+# Renombrar las columnas del DataFrame usando la función to_snake_case
+data.rename(columns=lambda x: to_snake_case(x), inplace=True)
+# Verificamos cambios
+data.info()
+
+
+# Revisando los valores ausentes podemos observar que, por ejemplo, para un 'customer_id' en donde no se tenga información de por ejemplo 'online_security' quiere decir que ese cliente no tiene esa información porque no tiene ese servicio (recordar que se hizo un cruce de datasets).
+# 
+# Por lo tanto rellenaremos esos valores ausentes con la palabra 'No'.
+
+# In[101]:
+
+
+for item in ['multiple_lines','internet_service','online_security','online_backup',
+             'device_protection','tech_support','streaming_tv','streaming_movies']:
+    data[item] = data[item].fillna('No')
+
+
+# In[102]:
+
+
+# Procedemos a corregir los tipos de datos de fechas.
+data['begin_date'] = pd.to_datetime(data['begin_date'],format='%Y-%m-%d')
+data['end_date'] = pd.to_datetime(data['end_date'],format='%Y-%m-%d %H:%M:%S', errors='coerce')
+
+
+# Por efectos de **multicolinealidad**, eliminamos el valor 'total_charges' ya que 'monthly_charges' refleja mejor la carga financiera recurrente del cliente y puede ser más dinámico para detectar cambios en el comportamiento del cliente. Además, se decidió no incorporar una columna de duración de contratos por el mismo efecto de multicolinealidad con la variable objetivo 'contract_status'.
+
+# In[103]:
+
+
+# Eliminar columna 'total_charges' para que no afecte el modelo.
+data = data.drop(columns=['total_charges'])
+
+
+# In[104]:
+
+
+data.info()
+
+
+# ### Distribución de datos - Gráficos
+
+# In[105]:
+
+
+# Estilos de Seaborn
+sns.set(style="whitegrid")
+
+# Boxplots para detectar outliers en variables numéricas
+for column in data.select_dtypes(include=['float64']).columns:
+    plt.figure(figsize=(8, 4))  # Tamaño de la figura más pequeño
+    sns.boxplot(x=data[column], palette="Set2")
+    plt.title(f'Boxplot of {column}', fontsize=14)
+    plt.xlabel(column, fontsize=12)
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
+    plt.show()
+
+
+# In[106]:
+
+
+# Matriz de correlación (Variables numéricas vs variable objetivo)
+correlation_matrix = data.corr()
+plt.figure(figsize=(12, 10))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
+plt.title('Correlation Matrix')
+plt.show()
+
+
+# In[107]:
+
+
+# Definimos la función para visualizar histogramas de variables categóricas
+def visualize_histograms(df, columns, title):
+    categorical_columns = [col for col in columns if df[col].dtype == 'object']
+    n = len(categorical_columns)
+    rows = (n + 1) // 2
+    fig, axes = plt.subplots(nrows=rows, ncols=2, figsize=(12, 5 * rows))
+    axes = axes.flatten()
+    for i, column in enumerate(categorical_columns):
+        axes[i].hist(df[column].dropna(), bins=30, alpha=0.7, edgecolor='black')  # Añadir borde negro a las barras
+        axes[i].set_title(f'Histograma de {column}')
+        
+        # Ajustamos los ticks del eje x para mejor visibilidad
+        axes[i].tick_params(axis='x', labelsize=10)  # Ajusta el tamaño de las etiquetas del eje x
+        axes[i].tick_params(axis='y', labelsize=10)  # Ajusta el tamaño de las etiquetas del eje y
+    
+        for tick in axes[i].get_xticklabels():
+            tick.set_rotation(90)
+        
+        axes[i].grid(axis='y', linestyle='--', alpha=0.7)
+    
+    plt.suptitle(title, fontsize=16)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
+
+# Definimos la función para visualizar gráficos de línea de variables numéricas
+def visualize_line_plots(df, columns, title):
+    numeric_columns = [col for col in columns if df[col].dtype == 'float64']
+    n = len(numeric_columns)
+    rows = (n + 1) // 2
+    fig, axes = plt.subplots(nrows=rows, ncols=2, figsize=(12, 5 * rows))
+    axes = axes.flatten()
+    for i, column in enumerate(numeric_columns):
+        sorted_data = df[column].dropna().sort_values().reset_index(drop=True)
+        axes[i].plot(sorted_data, alpha=0.7)
+        axes[i].set_title(f'Gráfico de Línea de {column}')
+        axes[i].set_xlim(left=0, right=len(sorted_data))
+        axes[i].tick_params(axis='x', labelsize=10)
+        axes[i].tick_params(axis='y', labelsize=10)
+        for tick in axes[i].get_xticklabels():
+            tick.set_rotation(90)
+        axes[i].grid(axis='y', linestyle='--', alpha=0.7)
+    plt.suptitle(title, fontsize=16)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
+    
+# Definimos la función para visualizar gráficos de torta de variables de tipo int
+def visualize_pie_charts(df, columns, title):
+    int_columns = [col for col in columns if df[col].dtype == 'int64']
+    n = len(int_columns)
+    rows = (n + 1) // 2
+    fig, axes = plt.subplots(nrows=rows, ncols=2, figsize=(12, 5 * rows))
+    axes = axes.flatten()
+    for i, column in enumerate(int_columns):
+        data = df[column].value_counts()
+        axes[i].pie(data, labels=data.index, autopct='%1.1f%%', startangle=140)
+        axes[i].set_title(f'Gráfico de Torta de {column}')
+    plt.suptitle(title, fontsize=16)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()    
+
+# Función para crear tablas de contingencia y gráficos de calor
+def visualize_contingency_heatmap(df, categorical_columns, target_column, title):
+    for column in categorical_columns:
+        contingency_table = pd.crosstab(df[column], df[target_column])
+        plt.figure(figsize=(10, 6))
+        sns.heatmap(contingency_table, annot=True, fmt='d', cmap='YlGnBu')
+        plt.title(f'Tabla de Contingencia y Gráfico de Calor de {column} vs {target_column}')
+        plt.show() 
+
+
+# In[108]:
+
+
+# Dataset completo 'data'
+columns_data = data.drop(columns=['customer_id', 'begin_date', 'end_date']).columns
+
+# Visualizar histogramas de variables categóricas
+visualize_histograms(data, columns_data, 'Histogramas de variables categóricas del dataset data')
+
+# Visualizar gráficos de línea de variables numéricas
+visualize_line_plots(data, columns_data, 'Gráfico de Línea de variables numéricas del dataset data')
+
+# Visualizar gráficos de torta de variables de tipo int
+visualize_pie_charts(data, columns_data, 'Gráficos de Torta de variables enteras del dataset data')
+
+# Excluyendo las columnas 'MonthlyChanges' y 'ContractStatus' para la visualización del mapa de calor contra la variable objetivo.
+heatmap_columns = [col for col in columns_data if col not in ['monthly_charges', 'contract_status']]
+visualize_contingency_heatmap(data, heatmap_columns, 'contract_status', 'Tablas de Contingencia del dataset data')
+
+
+# <div class="alert alert-block alert-success">
+# <b>Comentario del revisor</b> <a class=“tocSkip”></a>
+# Excelente trabajo con los gráficos en esta sección. Sin embargo, te recomiendo ser más específico al visualizar los datos, diferenciando claramente entre variables categóricas y numéricas. Recuerda que el histograma no es la mejor opción para visualizar variables categóricas; para estas, podrías usar gráficos de barras o diagramas de pastel, que proporcionan una representación más clara y precisa de la distribución de categorías.
+# </div>
+
+# 
+# **Respecto a la distribución de los datos en del dataset completo:**
+# * En la variable 'Type', 'Month-to-month' tiene mayor frecuencia que las demás, por lo que podría ocasionar distorsion en el modelo.
+# * Las variables PaperlessBilling y  PaymentMethod tienen una distribucion relativamente homogenea, excepto el pago por medio de cheque electrónico (electronic check), el cual tiene mayor preferencia.
+# * En el cargo mensual, se puede apreciar un pago mucho más frecuente entre los 0 a 20 dolares mensuales. Esto puede marcar diferencia en el modelo predictivo.
+# * Si vemos los cargos totales, la distribución pasa a ser homogenea en todos sus rangos.
+# * Podemos ver en la variable objetivo 'ContractStatus' que el valor 1 tiene mas frecuencia (5000) con respecto al valor 0 (poco menos de 2000 casos), es decir, la mayoría de contratos no han sido cancelados.
+# * En relacion al genero, no se ven una tendencia clara, lo cual puede ser irrelevante para el modelo y respecto a si son mayores de edad (SeniorCitizen) se puede ver que una minoría lo es..
+# * Respecto a si tienen pareja o no, este no hay una tendencia clara, pero respecto a si tiene dependientes en su familia sólo 2/7 lo tienen.
+# * Respecto al dataset 'internet' se ve que hubo más casos de usuarios que usaron megas más bajos.
+# 
+# **Respecto a la correlacion con la variable objetivo (categorica) sobre el término de contrato:**
+# 
+# * El término de contrato se da más en los contratos mensuales, no de largo plazo.
+# * Si hay facturacion electrónica hay mas casos de termino de contrato.
+# * El término se da más por el metodo de pago 'electronic check'.
+# * Se ve una leve tendencia al termino de contrato si no son 'senior citizen'.
+# * Los que no tienen dependientes ni pareja suelen terminar sus contratos.
+# * No se ve tendencia si el servicio tiene múltiples lineas.
+
+# **PREGUNTAS ACLARATORIAS**
+
+# 1) El enunciado del proyecto dice que la información de los contratos cuenta a partir del '2020-02-01' pero analizando los datos solo 11 contratos inician en esa fecha. ¿Hay un error en el dataset 'contract' o el enunciado quiere decir otra cosa?
+# 
+# 2) El dataset 'internet' no tiene el 'customerID' por lo que no puedo enlazar su información con los demas datasets.
+# 
+# 3) ¿Será oportuno calcular la duración de los contratos (valor duracion en meses o dias) y el tiempo restante del contrato (fecha inicio hasta 'no')? De ser así, ¿como podria dejar esa columna de duracion de contrato, es decir, con valores numéricos y una categoria de 'vigente' en una columna? 
+# 
+# 4) ¿Que quiere decir exactamente la variable 'session_date' del dataset 'internet'? ¿Debiese además haber una variable de tiempo para poder obtener el uso promedio de 'mb' por mes?
+# 
+# 5) El enunciado del proyecto habla de que Interconnect proporciona otros tipos de servicios, como: Seguridad en Internet y un bloqueador de sitios web maliciosos, una línea de soporte técnico, almacenamiento de archivos en la nube y backup de datos, y finalmente, Streaming de TV y directorio de películas, pero estos servicios no aparecen en los dataset entregados. ¿efectivamente falta algun otro dataset?.
+# 
+# 6) ¿Para el modelo debiese trabajar con el cobro mensual o cobro total? ¿Debería usar solo uno, no ambos, cierto?
+# 
+
+# <div class="alert alert-block alert-success">
+# <b>Comentario del revisor</b> <a class=“tocSkip”></a>
+# 
+# Has planteado preguntas importantes que necesitan clarificación para avanzar correctamente en el proyecto:
+# 
+# 1) **Sobre la información de contratos a partir del '2020-02-01'**: Hay un error en el enunciado. 
+# 
+# 2) **Falta de 'customerID' en el dataset 'internet'**: Es un problema significativo, ya que impide enlazar esta información con otros datasets. Te aconsejo revisar los datasets de la siguiente carpeta, pues creo son diferentes y eso es el problema: 
+# <code>
+# contract = pd.read_csv('/datasets/final_provider/contract.csv')
+# internet = pd.read_csv('/datasets/final_provider/internet.csv')
+# </code>    
+# 
+# 3) **Cálculo de la duración de los contratos**: Sí, es muy oportuno calcular la duración de los contratos y el tiempo restante. Podrías crear una columna de duración en días o meses y otra columna para indicar si el contrato está vigente ('vigente') o terminado. Tal como lo has planteado. 
+# 
+# 4) **Clarificación de 'session_date' en el dataset 'internet'**: Sí representa fechas de uso de servicio. 
+# 
+# 5) **Servicios adicionales de Interconnect**: No hay data sets adicionales. Aconsejo que no revisemos servicios adicionales. 
+#     
+# 
+# 6) **Cobro mensual vs cobro total**: Para el modelo predictivo, generalmente es mejor usar una sola variable para evitar multicolinealidad. Entre cobro mensual y cobro total, elegiría el cobro mensual, ya que refleja mejor la carga financiera recurrente del cliente y puede ser más dinámico para detectar cambios en el comportamiento del cliente.
+# 
+# </div>
+
+# **PASOS A SEGUIR PARA RESOLVER LA TAREA**
+
+# 1) Una vez realizado el análisis exploratorio de datos, debiese pasar a la etapa de 'Preparación de datos' según las conclusiones obtenidas de ese análisis. Esto incluye: ajuste de nombres en minusculas, tipo de datos de fechas, unificar datasets(debe incluir la informacion faltante de los servicios extras ademas de telefonia e internet), conversión de variables categóricas en numéricas para realizar el modelo, normalizar las variables numéricas, examinar equilibrio de clases.
+# 
+# 2) Dado que el objetivo es predecir una variable binaria (cancelación o no cancelación), se usarán modelos de clasificación supervisada, donde inicialmente se entrenará y evaluará el modelo de regresión lineal para tener un análisis base.
+# 
+# 3) Luego, seleccionamos el modelo más optimo basado en las métricas de evaluación como precision, recall, f1-score y AUC-ROC e hiperparámetros a través de métodos iterativos. Modelos pueden ser: Árboles de Decisión y Random Forest, o modelos más complejos con alto rendimiento como Gradient Boosting Machines (GBM) y XGBoost.
+# 
