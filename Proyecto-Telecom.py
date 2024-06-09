@@ -684,3 +684,9 @@ clases_equilibradas
 
 # En este caso, hay un desequilibrio significativo, ya que la clase 1 es mucho más común que la clase 0 (contratos dados de baja). Tendremos en cuenta este desequilibrio al entrenar y evaluar los modelos, ya que puede afectar la capacidad del modelo para aprender correctamente patrones en la clase minoritaria y puede sesgar las predicciones hacia la clase mayoritaria.
 
+# Eliminamos las columnas que no usaremos en el modelo por concepto de MULTICOLINEALIDAD.
+data_balanced_modelo = data_balanced.drop(columns=['customer_id', 'begin_date', 'end_date'])
+
+# ## Preparación del modelo
+# ### Modelo Equilibrado (submuestreo de clase mayoritaria)
+# #### División de los conjuntos
