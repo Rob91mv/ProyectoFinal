@@ -806,3 +806,129 @@ y_test_pred = best_model_1.predict(x_test)
 test_f1_1 = f1_score(y_test, y_test_pred)
 print(f"Mejor modelo en conjunto de prueba: {best_model_1} con F1-score = {test_f1_1}")
 
+# ### Modelo Equilibrado (sobremuestreo clase minoritaria)
+# #### División de los conjuntos
+
+# Separación de características y target
+a = data_balanced_modelo.drop('contract_status', axis=1)
+b = data_balanced_modelo['contract_status']
+
+# Dividimos el conjunto de datos en entrenamiento + validación y prueba
+a_train_val, a_test, b_train_val, b_test = train_test_split(a, b, test_size=0.2, random_state=42, stratify=b)
+
+# Dividimos el conjunto de entrenamiento + validación en conjunto de entrenamiento y validación
+a_train, a_val, b_train, b_val = train_test_split(a_train_val, b_train_val, test_size=0.25, random_state=42, stratify=b_train_val)
+
+# Revisamos la distribución de las clases
+print("Distribución en el conjunto de entrenamiento:", b_train.value_counts())
+print("Distribución en el conjunto de validación:", b_val.value_counts())
+print("Distribución en el conjunto de prueba:", b_test.value_counts())
+
+# #### Equilibrio por sobremuestreo de clase minoritaria
+
+# Combinamos a_train e b_train en un solo DataFrame para facilitar el muestreo
+train_data = pd.concat([a_train, b_train], axis=1)
+
+# Separamos la clase mayoritaria y la minoritaria
+df_majority = train_data[train_data.contract_status == 1]
+df_minority = train_data[train_data.contract_status == 0]
+
+
+# Sobremuestreo de la clase minoritaria
+df_minority_upsampled = resample(df_minority, 
+                                 replace=True,    # muestra con reemplazo
+                                 n_samples=len(df_majority), # para igualar el número de la clase mayoritaria
+                                 random_state=42)  # para la reproducibilidad
+
+
+# Combinamos clases minoritaria y mayoritaria
+train_data_balanced = pd.concat([df_majority_downsampled, df_minority])
+
+# Separamos de nuevo características y target
+a_train_balanced = train_data_balanced.drop('contract_status', axis=1)
+b_train_balanced = train_data_balanced['contract_status']
+
+# Revisamos la distribución de las clases en el conjunto de entrenamiento equilibrado
+print("Distribución en el conjunto de entrenamiento equilibrado:", b_train_balanced.value_counts())
+
+# #### Iteración de modelos
+# Definimos modelos candidatos
+models = {
+    'RandomForest': RandomForestClassifier(random_state=12345),
+    'DecisionTree': DecisionTreeClassifier(random_state=12345),
+    'LogisticRegression': LogisticRegression(random_state=12345),
+    'LightGBM': LGBMClassifier(random_state=12345),
+    'CatBoost': CatBoostClassifier(random_state=12345, verbose=0),
+    'XGBoost': XGBClassifier(random_state=12345, use_label_encoder=False, eval_metric='logloss'),
+    'GradientBoosting': LGBMClassifier(boosting_type='gbdt', random_state=12345)  # Agregamos Gradient Boosting
+}
+
+
+# Definimos hiperparámetros con rangos para iteración según aplique a cada modelo.
+param_grid = {
+    'RandomForest': {'n_estimators': range(10, 101, 10), 'max_depth': range(1, 21)},
+    'DecisionTree': {'max_depth': range(1, 21)},
+    'LogisticRegression': {},  # No hay hiperparámetros para LogisticRegression
+    'LightGBM': {'n_estimators': range(50, 201, 50), 'max_depth': range(1, 21)},
+    'CatBoost': {'depth': range(1, 11), 'iterations': range(50, 201, 50)},
+    'XGBoost': {'n_estimators': range(50, 201, 50), 'max_depth': range(1, 21)},
+    'GradientBoosting': {'n_estimators': range(50, 201, 50), 'max_depth': range(1, 21)}  # Hiperparámetros para Gradient Boosting
+}
+
+# Definimos parámetros para iteración de entrenamiento y ajuste de modelos
+best_model_2 = None
+best_f1_score_2 = 0
+
+for name, model in models.items():
+    params = param_grid[name]
+    best_params = None
+    best_model_instance = None
+    best_f1_score_instance = 0
+    
+    for n_estimators in params.get('n_estimators', [None]):
+        for max_depth in params.get('max_depth', [None]):
+            if name == 'RandomForest':
+                model_instance = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, random_state=12345)
+            elif name == 'DecisionTree':
+                model_instance = DecisionTreeClassifier(max_depth=max_depth, random_state=12345)
+            elif name == 'LightGBM':
+                model_instance = LGBMClassifier(n_estimators=n_estimators, max_depth=max_depth, random_state=12345)
+            elif name == 'CatBoost':
+                model_instance = CatBoostClassifier(depth=max_depth, iterations=n_estimators, random_state=12345, verbose=0)
+            elif name == 'XGBoost':
+                model_instance = XGBClassifier(n_estimators=n_estimators, max_depth=max_depth, random_state=12345, use_label_encoder=False, eval_metric='logloss')
+            elif name == 'GradientBoosting':  # Implementación del Gradient Boosting
+                model_instance = LGBMClassifier(boosting_type='gbdt', n_estimators=n_estimators, max_depth=max_depth, random_state=12345)
+            else:
+                model_instance = LogisticRegression(random_state=12345)
+            
+            # Entrenamos con los datos balanceados
+            model_instance.fit(a_train_balanced, b_train_balanced)
+            
+            # Evaluamos en el conjunto de validación
+            b_val_pred = model_instance.predict(a_val)
+            f1 = f1_score(b_val, b_val_pred)
+            
+            if f1 > best_f1_score_instance:
+                best_f1_score_instance = f1
+                best_model_instance = model_instance
+                best_params = {'n_estimators': n_estimators, 'max_depth': max_depth}
+    
+    print(f"Mejor F1-score para {name}: {best_f1_score_instance} con hiperparámetros: {best_params}")
+    
+    if best_f1_score_instance > best_f1_score_2:
+        best_model_2 = best_model_instance
+        best_f1_score_2 = best_f1_score_instance
+
+# Evaluación del mejor modelo en el conjunto de prueba
+b_test_pred = best_model_2.predict(a_test)
+test_f1_2 = f1_score(b_test, b_test_pred)
+print(f"Mejor modelo en conjunto de prueba: {best_model_2} con F1-score = {test_f1_2}")
+
+# Evaluamos el mejor modelo en conjunto de prueba
+b_pred_test = best_model_2.predict(a_test)
+# Evaluamos F1 en el conjunto de prueba
+f1_test_2 = f1_score(b_test, b_pred_test)
+print("Mejor modelo (basado en F1-score en conjunto de validación) en conjunto de prueba:")
+print(classification_report(b_test, b_pred_test))
+print(f'F1 en conjunto de prueba: {f1_test_2}')
