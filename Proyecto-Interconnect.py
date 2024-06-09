@@ -1151,3 +1151,22 @@ f1_test_4 = f1_score(i_test, i_pred_test)
 print("Mejor modelo (basado en F1-score en conjunto de validación) en conjunto de prueba:")
 print(classification_report(i_test, i_pred_test))
 print(f'F1 en conjunto de prueba: {f1_test_4}')
+
+# ## Métrica AUC-ROC
+# Calculamos y graficamos AUC-ROC usando el mejor modelo que es "best_model_4"
+i_test_prob = best_model_4.predict_proba(h_test)[:, 1]
+roc_auc = roc_auc_score(i_test, i_test_prob)
+fpr, tpr, thresholds = roc_curve(i_test, i_test_prob)
+
+plt.figure()
+plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
+plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Receiver Operating Characteristic')
+plt.legend(loc="lower right")
+plt.show()
+
+print("Valor AUC-ROC:", roc_auc)
