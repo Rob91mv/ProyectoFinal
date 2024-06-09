@@ -38,11 +38,10 @@
 # El siguiente proyecto consiste en asesorar a la compañía de telecomunicaciones Interconnect sobre la creación de un modelo predictivo de la tasa de cancelación de clientes, de tal forma de que la compañía pueda anticiparse para ofrecer códigos promocionlaes y opciones de planes especiales. 
 # 
 # Para ello se utilizaran bases de datos facilitadas por el equipo de marketing de Interconnect que recopila datos desde el 2016 en adelante.
-# Se debe considerar que la información del contrato es válida a partir del 1 de febrero de 2020.
 
 # ## Inicialización
 
-# In[65]:
+# In[1]:
 
 
 import pandas as pd
@@ -50,26 +49,33 @@ import re
 from scipy import stats as st
 import seaborn as sns
 import matplotlib.pyplot as plt
+
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from lightgbm import LGBMClassifier
+from catboost import CatBoostClassifier
+from xgboost import XGBClassifier
+
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score
 from sklearn.utils import shuffle
 from sklearn.utils import resample
-from sklearn.metrics import roc_curve, roc_auc_score
+from sklearn.metrics import roc_curve, roc_auc_score, auc
 
 
-## Carga de datos
+# ## Carga de datos
+
+# In[2]:
 
 
-contract = pd.read_csv('/datasets/final_provider/contract.csv')
-personal = pd.read_csv('/datasets/final_provider/personal.csv')
-internet = pd.read_csv('/datasets/final_provider/internet.csv')
-phone = pd.read_csv('/datasets/final_provider/phone.csv')
+contract = pd.read_csv('/Users/rmmniv/Library/Mobile Documents/com~apple~CloudDocs/Data Science/SPRINT 17 - Proyecto Final/final_provider/contract.csv')
+personal = pd.read_csv('/Users/rmmniv/Library/Mobile Documents/com~apple~CloudDocs/Data Science/SPRINT 17 - Proyecto Final/final_provider/personal.csv')
+internet = pd.read_csv('/Users/rmmniv/Library/Mobile Documents/com~apple~CloudDocs/Data Science/SPRINT 17 - Proyecto Final/final_provider/internet.csv')
+phone = pd.read_csv('/Users/rmmniv/Library/Mobile Documents/com~apple~CloudDocs/Data Science/SPRINT 17 - Proyecto Final/final_provider/phone.csv')
 
 
 # <div class="alert alert-block alert-danger">
@@ -78,12 +84,15 @@ phone = pd.read_csv('/datasets/final_provider/phone.csv')
 
 # 
 # <div class="alert alert-block alert-info">
-# <b>Corregido el llamado a los datasets</b> <a class=“tocSkip”></a>
+# <b>Respuesta estudiante</b> <a class=“tocSkip”></a>
+# 
+#     Corregido el llaado a los datasets
 # </div>
+# 
 
 # ## Análisis exploratorio de datos (EDA)
 
-# In[67]:
+# In[3]:
 
 
 contract.info() #Verificamos los campos a nivel general de 'contract'
@@ -105,13 +114,13 @@ contract.info() #Verificamos los campos a nivel general de 'contract'
 # La carga de datos se realiza correctamente, utilizando pandas para leer los archivos CSV. Además, se incluye una descripción de los campos en el dataset 'contract', lo que facilita la comprensión de las variables disponibles para el análisis.
 # </div>
 
-# In[68]:
+# In[4]:
 
 
 contract.tail(4) #Vemos una muestra
 
 
-# In[69]:
+# In[5]:
 
 
 #Verificamos duplicidad
@@ -122,19 +131,19 @@ cantidad_duplicados1 # Finalmente, comprobamos el número de filas duplicadas de
 
 # A continuacion procedemos a revisar los posibles errores y/o anomalías de cada variable de 'contract'.
 
-# In[70]:
+# In[6]:
 
 
 contract['BeginDate'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en las fechas.
 
 
-# In[71]:
+# In[7]:
 
 
 contract['EndDate'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en las fechas.
 
 
-# In[72]:
+# In[8]:
 
 
 # Creamos la variable objetivo en una nueva columna, ya que es clave para el análisis.
@@ -144,25 +153,25 @@ contract['ContractStatus'] = contract['EndDate'].apply(lambda x: 1 if x == 'No' 
 print(contract[['EndDate', 'ContractStatus']].head())
 
 
-# In[73]:
+# In[9]:
 
 
 contract['Type'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en los datos.
 
 
-# In[74]:
+# In[10]:
 
 
 contract['PaperlessBilling'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en los datos.
 
 
-# In[75]:
+# In[11]:
 
 
 contract['PaymentMethod'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en los datos.
 
 
-# In[76]:
+# In[12]:
 
 
 personal.info() #Verificamos los campos a nivel general de 'personal'
@@ -176,13 +185,13 @@ personal.info() #Verificamos los campos a nivel general de 'personal'
 # * Partner - Si el cliente tiene pareja (puede influir en la estabilidad del cliente con el servicio).
 # * Dependents - Si el cliente tiene dependientes (podría influir en la decisión de cancelar el servicio).
 
-# In[77]:
+# In[13]:
 
 
 personal.head(4)  # Vemos una muestra
 
 
-# In[78]:
+# In[14]:
 
 
 #Verificamos duplicidad
@@ -193,31 +202,31 @@ cantidad_duplicados2 # Finalmente, comprobamos el número de filas duplicadas de
 
 # A continuacion procedemos a revisar los posibles errores y/o anomalías de cada variable de 'personal'.
 
-# In[79]:
+# In[15]:
 
 
 personal['gender'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en los datos.
 
 
-# In[80]:
+# In[16]:
 
 
 personal['SeniorCitizen'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en los datos.
 
 
-# In[81]:
+# In[17]:
 
 
 personal['Partner'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en los datos.
 
 
-# In[82]:
+# In[18]:
 
 
 personal['Dependents'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en los datos.
 
 
-# In[83]:
+# In[19]:
 
 
 internet.info() #Verificamos los campos a nivel general de 'internet'
@@ -235,13 +244,13 @@ internet.info() #Verificamos los campos a nivel general de 'internet'
 # * StreamingMovies: Si tiene o no servicio de directorio de peliculas.
 # 
 
-# In[84]:
+# In[20]:
 
 
 internet.tail(4) #Vemos una muestra
 
 
-# In[85]:
+# In[21]:
 
 
 #Verificamos duplicidad
@@ -250,7 +259,7 @@ cantidad_duplicados3 = duplicados3.sum()
 cantidad_duplicados3 # Finalmente, comprobamos el número de filas duplicadas de 'internet'
 
 
-# In[86]:
+# In[22]:
 
 
 internet.describe() # Vemos si hay anomalías en los valores numéricos de 'internet'
@@ -258,49 +267,49 @@ internet.describe() # Vemos si hay anomalías en los valores numéricos de 'inte
 
 # A continuacion procedemos a revisar los posibles errores y/o anomalías de cada variable de 'internet'.
 
-# In[87]:
+# In[23]:
 
 
 internet['InternetService'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en servicio de internet.
 
 
-# In[88]:
+# In[24]:
 
 
 internet['OnlineSecurity'].sort_values(ascending=True).unique() # Verificamos posibles anomalías.
 
 
-# In[89]:
+# In[25]:
 
 
 internet['OnlineBackup'].sort_values(ascending=True).unique() # Verificamos posibles anomalías.
 
 
-# In[90]:
+# In[26]:
 
 
 internet['DeviceProtection'].sort_values(ascending=True).unique() # Verificamos posibles anomalías.
 
 
-# In[91]:
+# In[27]:
 
 
 internet['TechSupport'].sort_values(ascending=True).unique() # Verificamos posibles anomalías.
 
 
-# In[92]:
+# In[28]:
 
 
 internet['StreamingTV'].sort_values(ascending=True).unique() # Verificamos posibles anomalías.
 
 
-# In[93]:
+# In[29]:
 
 
 internet['StreamingMovies'].sort_values(ascending=True).unique() # Verificamos posibles anomalías.
 
 
-# In[94]:
+# In[30]:
 
 
 phone.info() #Verificamos los campos a nivel general de 'phone'
@@ -311,13 +320,13 @@ phone.info() #Verificamos los campos a nivel general de 'phone'
 # * customerID - ID del cliente.
 # * MultipleLines - Indicador de si el cliente tiene múltiples líneas telefónicas (puede ser relevante para entender la complejidad del servicio contratado).
 
-# In[95]:
+# In[31]:
 
 
 phone.head()  #Vemos una muestra
 
 
-# In[96]:
+# In[32]:
 
 
 #Verificamos duplicidad
@@ -328,7 +337,7 @@ cantidad_duplicados4 # Finalmente, comprobamos el número de filas duplicadas de
 
 # A continuacion procedemos a revisar los posibles errores y/o anomalías de cada variable de 'phone'.
 
-# In[97]:
+# In[33]:
 
 
 phone['MultipleLines'].sort_values(ascending=True).unique() # Verificamos posibles anomalías en los datos.
@@ -336,7 +345,7 @@ phone['MultipleLines'].sort_values(ascending=True).unique() # Verificamos posibl
 
 # Para efectos de analizar las variables en su totalidad en funcion de la variable objetivo es necesario unificar los datasets a continuacion:
 
-# In[98]:
+# In[34]:
 
 
 # Unir los datasets contract y personal
@@ -368,7 +377,7 @@ data.info()#Verificamos la unificacion
 
 # Procederemos a corregir los datos según lo analizado anteriormente.
 
-# In[99]:
+# In[35]:
 
 
 # Definimos funcion para corregir texto de variables
@@ -377,7 +386,7 @@ def to_snake_case(name):
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
-# In[100]:
+# In[36]:
 
 
 # Renombrar las columnas del DataFrame usando la función to_snake_case
@@ -390,7 +399,7 @@ data.info()
 # 
 # Por lo tanto rellenaremos esos valores ausentes con la palabra 'No'.
 
-# In[101]:
+# In[37]:
 
 
 for item in ['multiple_lines','internet_service','online_security','online_backup',
@@ -398,7 +407,7 @@ for item in ['multiple_lines','internet_service','online_security','online_backu
     data[item] = data[item].fillna('No')
 
 
-# In[102]:
+# In[38]:
 
 
 # Procedemos a corregir los tipos de datos de fechas.
@@ -408,14 +417,14 @@ data['end_date'] = pd.to_datetime(data['end_date'],format='%Y-%m-%d %H:%M:%S', e
 
 # Por efectos de **multicolinealidad**, eliminamos el valor 'total_charges' ya que 'monthly_charges' refleja mejor la carga financiera recurrente del cliente y puede ser más dinámico para detectar cambios en el comportamiento del cliente. Además, se decidió no incorporar una columna de duración de contratos por el mismo efecto de multicolinealidad con la variable objetivo 'contract_status'.
 
-# In[103]:
+# In[39]:
 
 
 # Eliminar columna 'total_charges' para que no afecte el modelo.
 data = data.drop(columns=['total_charges'])
 
 
-# In[104]:
+# In[40]:
 
 
 data.info()
@@ -423,7 +432,7 @@ data.info()
 
 # ### Distribución de datos - Gráficos
 
-# In[105]:
+# In[41]:
 
 
 # Estilos de Seaborn
@@ -432,7 +441,7 @@ sns.set(style="whitegrid")
 # Boxplots para detectar outliers en variables numéricas
 for column in data.select_dtypes(include=['float64']).columns:
     plt.figure(figsize=(8, 4))  # Tamaño de la figura más pequeño
-    sns.boxplot(x=data[column], palette="Set2")
+    sns.boxplot(x=data[column])
     plt.title(f'Boxplot of {column}', fontsize=14)
     plt.xlabel(column, fontsize=12)
     plt.xticks(fontsize=10)
@@ -440,18 +449,20 @@ for column in data.select_dtypes(include=['float64']).columns:
     plt.show()
 
 
-# In[106]:
+# In[42]:
 
+# Filtramos solo las columnas numéricas
+numeric_data = data.select_dtypes(include=['number'])
 
 # Matriz de correlación (Variables numéricas vs variable objetivo)
-correlation_matrix = data.corr()
+correlation_matrix = numeric_data.corr()
 plt.figure(figsize=(12, 10))
 sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
 plt.title('Correlation Matrix')
 plt.show()
 
 
-# In[107]:
+# In[43]:
 
 
 # Definimos la función para visualizar histogramas de variables categóricas
@@ -524,7 +535,7 @@ def visualize_contingency_heatmap(df, categorical_columns, target_column, title)
         plt.show() 
 
 
-# In[108]:
+# In[44]:
 
 
 # Dataset completo 'data'
@@ -616,3 +627,60 @@ visualize_contingency_heatmap(data, heatmap_columns, 'contract_status', 'Tablas 
 # 
 # 3) Luego, seleccionamos el modelo más optimo basado en las métricas de evaluación como precision, recall, f1-score y AUC-ROC e hiperparámetros a través de métodos iterativos. Modelos pueden ser: Árboles de Decisión y Random Forest, o modelos más complejos con alto rendimiento como Gradient Boosting Machines (GBM) y XGBoost.
 # 
+
+# ## Examinación de equilibrio de clases
+
+# Antes de examinar las clases, debemos preparar el dataset con la mayor cantidad de valores numéricos, por ejemplo, transformaremos las variables con datos 'Yes' en 1 y 'No' en 0.
+
+# In[45]:
+
+
+data.info()
+
+
+# In[46]:
+
+
+# Función para transformar las variables con Yes y No en 1 y 0.
+def transform_yes_no_to_binary(df, columns):
+    for column in columns:
+        df[column] = df[column].map({'Yes': 1, 'No': 0})
+    return df
+
+
+# Lista de columnas a transformar
+columns_to_transform = ['paperless_billing', 'partner', 'dependents','multiple_lines','online_security','online_backup',
+                        'device_protection','tech_support','streaming_tv','streaming_movies'] # columnas categoricas
+
+#  Se llama a la función para transformar el dataset 'data'
+data = transform_yes_no_to_binary(data, columns_to_transform)
+
+# Verificamos la transformación
+print(data[columns_to_transform].head())
+
+
+# In[49]:
+
+
+# Convertimos las variables categóricas del dataset en representaciones numéricas usando one-hot encoding
+data_balanced = pd.get_dummies(data, columns=['type','payment_method','gender','internet_service'])
+
+
+# In[54]:
+
+
+data_balanced.head()
+
+
+# In[55]:
+
+
+# Recordamos el equilibrio de clases de la variable objetivo.
+clases_equilibradas = data_balanced['contract_status'].value_counts(normalize=True)
+clases_equilibradas
+
+
+# Esto significa que aproximadamente el 73.46% de las observaciones en el conjunto de datos pertenecen a la clase 1 (contratos vigentes), mientras que aproximadamente el 26.54% pertenecen a la clase 0 (contratos dados de baja).
+
+# En este caso, hay un desequilibrio significativo, ya que la clase 1 es mucho más común que la clase 0 (contratos dados de baja). Tendremos en cuenta este desequilibrio al entrenar y evaluar los modelos, ya que puede afectar la capacidad del modelo para aprender correctamente patrones en la clase minoritaria y puede sesgar las predicciones hacia la clase mayoritaria.
+
