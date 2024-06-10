@@ -1170,3 +1170,31 @@ plt.legend(loc="lower right")
 plt.show()
 
 print("Valor AUC-ROC:", roc_auc)
+
+# ## Conclusiones
+# De informe podemos concluir lo siguiente:
+
+# Luego de realizar 4 tipos de equilibrio de clases e iterar distintos modelos predictivos para predecir la cancelación de contratos en Telecom, podemos concluir que el mejor modelo fue:
+    
+#a) **Efectividad general del modelo**
+    
+#    *  RandomForestClassifier con un max_depth=6, n_estimators=20.
+#    *  Este modelo se obtuvo mediante el método de sobremuestreo de clases por aplicación "shuffle".
+#    *  Valor AUC-ROC fue de 0.81, lo que sugiere que el modelo tiene una buena capacidad de discriminación entre los contratos que serán dados de baja y los que no.
+#    *  El modelo tiene una exactitud del 78%, lo que significa que el modelo clasifica correctamente la mayoría de los contratos.
+#    *  Valor F1 para la clase 1 (contratos vigentes) fue de 0.86 y valor F1 para clase 0 (contratos dados de baja) fue de 0.49.
+    
+#b) **Desempeño en la Clase Minoritaria (Contratos que serán dados de baja - Clase 0)**
+    
+#    * Precisión del 62%: De todos los contratos que el modelo predijo que serían dados de baja, el 62% fueron efectivamente dados de baja, es decir, alto numero de falsos positivos.
+#    * Recuperación del 41%: El modelo identifica el 41% de todos los contratos que efectivamente serán dados de baja. Aunque este valor no es muy alto, indica que casi la mitad de los contratos en riesgo son detectados.
+#    * F1-score del 49%: Este es un balance entre la precisión y la recuperación, lo que muestra que hay un margen para mejorar la detección efectiva de los contratos en riesgo.
+
+
+# c) **Desempeño en la Clase Mayoritaria (Contratos que no serán dados de baja - Clase 1)**
+    
+#    * Precisión del 81% y Recuperación del 91%: Estos valores indican que el modelo es muy efectivo en identificar correctamente los contratos que no serán dados de baja, es decir, con pocos falsos negativos.
+    
+    
+#* Finalmente, el modelo predictivo muestra un buen desempeño general y es especialmente preciso para identificar contratos que no serán dados de baja, aunque la identificación de contratos en riesgo de baja aún tiene un margen de mejora, el modelo proporciona un punto de partida importante para acciones preventivas y la retención de clientes.
+ 
