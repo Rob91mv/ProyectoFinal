@@ -1163,6 +1163,7 @@ print("Mejor modelo (basado en F1-score en conjunto de validación) en conjunto 
 print(classification_report(i_test, i_pred_test))
 print(f'F1 en conjunto de prueba: {f1_test_4}')
 
+
 # ## Métrica AUC-ROC
 # Calculamos y graficamos AUC-ROC usando el mejor modelo que es "best_model_4"
 i_test_prob = best_model_4.predict_proba(h_test)[:, 1]
@@ -1181,6 +1182,24 @@ plt.legend(loc="lower right")
 plt.show()
 
 print("Valor AUC-ROC:", roc_auc)
+
+# Obtener el reporte de clasificación
+report = classification_report(i_test, i_pred_test, output_dict=True)
+
+# Convertir el reporte en un DataFrame de pandas
+report_df = pd.DataFrame(report).transpose()
+
+# Añadir el F1-score a nivel general
+f1_row = pd.DataFrame({'precision': [None], 'recall': [None], 'f1-score': [f1_test_4], 'support': [None]}, index=['overall'])
+
+# Concatenar el DataFrame del reporte con la fila del F1-score
+final_df = pd.concat([report_df, f1_row])
+
+# Guardar el DataFrame en un archivo CSV
+final_df.to_csv('classification_report.csv', index=True)
+
+print("Reporte de clasificación y F1-score guardados en 'classification_report.csv'")
+
 
 # ## Conclusiones
 # De informe podemos concluir lo siguiente:
