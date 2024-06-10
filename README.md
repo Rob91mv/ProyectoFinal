@@ -1,5 +1,4 @@
 # PROYECTO PARA INTERCONNECT
-#TTPF
 
 ## Objetivo del Proyecto Final - Bootcamp Data Science.
 
