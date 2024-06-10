@@ -46,6 +46,7 @@
 
 import pandas as pd
 import re
+import os
 from scipy import stats as st
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -432,6 +433,14 @@ data.info()
 
 # ### Distribución de datos - Gráficos
 
+#Función para crear carpeta de imagenes
+def create_images_folder():
+    if not os.path.exists('imagenes'):
+        os.makedirs('imagenes')
+
+# Llamamos a la función para crear la carpeta de imagenes
+create_images_folder()
+
 # In[41]:
 
 
@@ -446,6 +455,7 @@ for column in data.select_dtypes(include=['float64']).columns:
     plt.xlabel(column, fontsize=12)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
+    plt.savefig(f'imagenes/Gráfico Boxplot_{column}.png') 
     plt.show()
 
 
@@ -459,6 +469,7 @@ correlation_matrix = numeric_data.corr()
 plt.figure(figsize=(12, 10))
 sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
 plt.title('Correlation Matrix')
+plt.savefig(f'imagenes/Matriz de correlación.png') 
 plt.show()
 
 
@@ -487,6 +498,7 @@ def visualize_histograms(df, columns, title):
     
     plt.suptitle(title, fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.savefig(f'imagenes/{title}_{column}.png')  
     plt.show()
 
 # Definimos la función para visualizar gráficos de línea de variables numéricas
@@ -508,6 +520,7 @@ def visualize_line_plots(df, columns, title):
         axes[i].grid(axis='y', linestyle='--', alpha=0.7)
     plt.suptitle(title, fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.savefig(f'imagenes/{title}_{column}.png') 
     plt.show()
     
 # Definimos la función para visualizar gráficos de torta de variables de tipo int
@@ -523,6 +536,7 @@ def visualize_pie_charts(df, columns, title):
         axes[i].set_title(f'Gráfico de Torta de {column}')
     plt.suptitle(title, fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.savefig(f'imagenes/{title}_{column}.png')
     plt.show()    
 
 # Función para crear tablas de contingencia y gráficos de calor
@@ -532,6 +546,7 @@ def visualize_contingency_heatmap(df, categorical_columns, target_column, title)
         plt.figure(figsize=(10, 6))
         sns.heatmap(contingency_table, annot=True, fmt='d', cmap='YlGnBu')
         plt.title(f'Tabla de Contingencia y Gráfico de Calor de {column} vs {target_column}')
+        plt.savefig(f'imagenes/{title}_{column}_vs_{target_column}.png')
         plt.show() 
 
 
@@ -1179,6 +1194,7 @@ plt.xlabel('False Positive Rate')
 plt.ylabel('True Positive Rate')
 plt.title('Receiver Operating Characteristic')
 plt.legend(loc="lower right")
+plt.savefig(f'imagenes/Gráfico AUC-ROC.png')
 plt.show()
 
 print("Valor AUC-ROC:", roc_auc)
@@ -1196,9 +1212,9 @@ f1_row = pd.DataFrame({'precision': [None], 'recall': [None], 'f1-score': [f1_te
 final_df = pd.concat([report_df, f1_row])
 
 # Guardar el DataFrame en un archivo CSV
-final_df.to_csv('classification_report.csv', index=True)
+final_df.to_csv('classification_bestmodel_report.csv', index=True)
 
-print("Reporte de clasificación y F1-score guardados en 'classification_report.csv'")
+print("Reporte de clasificación y F1-score guardados en 'classification_bestmodel_report.csv'")
 
 
 # ## Conclusiones
