@@ -26,6 +26,20 @@ El modelo predictivo a construir permitirá predecir si un cliente cancelará su
 
 ## Entregables
 
+* Gráficos EDA: histogramas de variables categóricas, graficos de lineas de variables numericas, matriz de correlacion con variable objetivo, entre otros.
+* Archivos .csv que contiene el dataset con datos limpios y dataset listo para el modelado.
+* Gráfico de la curva AUC-ROC del modelo con mayor calidad.
+* Archivo .csv que contiene la información del mejor modelo.
+
+## Criterios de éxito del proyecto
+
+El proyecto debe tener un valor AUC-ROC mayor o igual a 0.75 en el conjunto de prueba.
+
+## Instrucciones de uso
+
+Ejecutar archivo "Proyecto-Interconnect.py"
+Archivo "Proyecto-Interconnect.ipynb" contiene el informe del proyecto.
+
 
 
 
